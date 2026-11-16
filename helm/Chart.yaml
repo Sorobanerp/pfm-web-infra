@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pfm-web-nextjs
+description: 1:1 Helm Chart for pfm-web-nextjs (Next.js App Router Standalone)
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
