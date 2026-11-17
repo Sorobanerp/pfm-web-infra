@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pfm-web-nextjs-netpol
+  namespace: pfm-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: pfm-web-nextjs
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 3000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: pfm-ingestion-bff-go
+      ports:
+        - protocol: TCP
+          port: 8081
