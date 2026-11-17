@@ -23,7 +23,12 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           ports:
             - name: http
-              containerPort: 3000
+              containerPort: {{ .Values.ports.container }}
               protocol: TCP
+          env:
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

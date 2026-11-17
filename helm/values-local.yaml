@@ -1,11 +1,15 @@
+ports:
+  # container = porta de escuta do processo (env); service = porta do Service K8s
+  container: 3000
+  service: 80
 replicaCount: 1
 image:
   repository: ghcr.io/dantas-pfm/pfm-web-nextjs
   tag: "local"
 service:
-  port: 3000
+  port: 80
 env:
-  NEXT_PUBLIC_PFM_BFF_URL: "http://localhost:8080"
+  NEXT_PUBLIC_PFM_BFF_URL: "http://localhost:18080"
 resources:
   requests:
     cpu: "100m"

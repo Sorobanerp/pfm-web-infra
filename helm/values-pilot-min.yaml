@@ -1,3 +1,7 @@
+ports:
+  # container = porta de escuta do processo (env); service = porta do Service K8s
+  container: 3000
+  service: 80
 # FinOps Minimum Footprint for 5-User Family Pilot (~US$ 8/mo GCP / ~US$ 41/mo AWS)
 replicaCount: 1
 
@@ -7,7 +11,7 @@ image:
   pullPolicy: IfNotPresent
 
 service:
-  port: 3000
+  port: 80
 
 env:
   NEXT_PUBLIC_PFM_BFF_URL: "https://api.pfm.dantas.com.br"

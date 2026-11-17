@@ -13,7 +13,7 @@ spec:
   ingress:
     - ports:
         - protocol: TCP
-          port: 3000
+          port: {{ .Values.ports.container }}
   egress:
     - to:
         - podSelector:
@@ -21,4 +21,4 @@ spec:
               app: pfm-ingestion-bff-go
       ports:
         - protocol: TCP
-          port: 8081
+          port: 8080

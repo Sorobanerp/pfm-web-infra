@@ -11,6 +11,6 @@ spec:
     app: pfm-web-nextjs
   ports:
     - name: http
-      port: 3000
+      port: {{ .Values.ports.service }}
       targetPort: http
       protocol: TCP
