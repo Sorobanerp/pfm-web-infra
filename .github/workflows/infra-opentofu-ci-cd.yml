@@ -34,12 +34,11 @@ jobs:
             (cd "$d" && tofu init -backend=false -input=false >/dev/null && tofu validate)
             echo "::endgroup::"
           done
+      - name: Install Trivy CLI
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin || curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ~/.local/bin
       - name: Trivy config scan (IaC)
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          scan-type: config
-          severity: CRITICAL,HIGH
-          exit-code: "1"
+        run: trivy config --exit-code 1 --severity CRITICAL,HIGH .
 
   plan:
     name: tofu plan (AWS)
