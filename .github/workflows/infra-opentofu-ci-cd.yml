@@ -55,14 +55,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: opentofu/setup-opentofu@v1
-      - name: Diagnóstico OIDC (claims públicos sem expor token)
-        run: |
-          OIDC_JWT=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
-          PAYLOAD=$(printf '%s' "${OIDC_JWT}" | cut -d'.' -f2 | tr '_-' '/+')
-          MOD=$((${#PAYLOAD} % 4))
-          if [ "${MOD}" -eq 2 ]; then PAYLOAD="${PAYLOAD}=="; elif [ "${MOD}" -eq 3 ]; then PAYLOAD="${PAYLOAD}="; fi
-          printf '%s' "${PAYLOAD}" | base64 -d 2>/dev/null | jq '{sub, aud, iss, repository, ref, event_name}'
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
