@@ -10,6 +10,12 @@ service:
   port: 80
 env:
   NEXT_PUBLIC_PFM_BFF_URL: "https://api.pfm.dantas.com.br"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://datadog-agent.monitoring.svc.cluster.local:4318"
+  OTEL_SERVICE_NAME: "pfm-web-nextjs"
+  DD_LOGS_INJECTION: "true"
+  DD_SERVICE: "pfm-web-nextjs"
+  DD_ENV: "production"
+  DD_VERSION: "0.1.0"
 resources:
   requests:
     cpu: "200m"

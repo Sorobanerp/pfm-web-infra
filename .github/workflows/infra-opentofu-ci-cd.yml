@@ -1,0 +1,94 @@
+name: Infra OpenTofu CI/CD
+
+on:
+  pull_request:
+    branches: [develop, "release/**", main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: infra-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_DIR: terraform/aws
+
+jobs:
+  validate:
+    name: fmt, validate e IaC security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+      - name: tofu fmt -check
+        run: tofu fmt -check -recursive
+      - name: tofu validate (todos os módulos/ambientes)
+        run: |
+          set -e
+          for d in $(find . -name '*.tf' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u); do
+            echo "::group::validate $d"
+            (cd "$d" && tofu init -backend=false -input=false >/dev/null && tofu validate)
+            echo "::endgroup::"
+          done
+      - name: Install Trivy CLI
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin || curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ~/.local/bin
+      - name: Trivy config scan (IaC)
+        run: trivy config --exit-code 1 --severity CRITICAL,HIGH .
+
+  plan:
+    name: tofu plan (AWS)
+    needs: validate
+    if: github.event_name == 'pull_request' && vars.TF_STATE_BUCKET_AWS != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: tofu init (backend S3 + lock DynamoDB)
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          printf 'terraform {\n  backend "s3" {}\n}\n' > backend_override.tf
+          tofu init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET_AWS }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE_AWS }}" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="key=pfm-web-infra/terraform.tfstate" \
+            -backend-config="encrypt=true"
+      - name: tofu plan
+        working-directory: ${{ env.TF_DIR }}
+        run: tofu plan -input=false -no-color
+
+  apply:
+    name: tofu apply (production)
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.TF_STATE_BUCKET_AWS != ''
+    runs-on: ubuntu-latest
+    environment: production   # aprovação da GMUD
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: tofu init (backend S3 + lock DynamoDB)
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          printf 'terraform {\n  backend "s3" {}\n}\n' > backend_override.tf
+          tofu init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET_AWS }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE_AWS }}" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="key=pfm-web-infra/terraform.tfstate" \
+            -backend-config="encrypt=true"
+      - name: tofu apply
+        working-directory: ${{ env.TF_DIR }}
+        run: tofu apply -auto-approve -input=false -no-color
