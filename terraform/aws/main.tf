@@ -5,6 +5,14 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.15"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.33"
+    }
   }
 }
 
@@ -22,6 +30,12 @@ variable "shared_state_bucket" {
   type        = string
   default     = "sorobanerp-pfm-tfstate-us-east-2-366476833548"
   description = "S3 bucket storing pfm-shared-infra remote state"
+}
+
+variable "eks_cluster_name" {
+  type        = string
+  default     = ""
+  description = "Optional override for EKS cluster name"
 }
 
 variable "oidc_provider_arn" {
@@ -50,8 +64,31 @@ data "terraform_remote_state" "shared" {
 }
 
 locals {
+  eks_cluster_name  = coalesce(var.eks_cluster_name, try(data.terraform_remote_state.shared.outputs.eks_cluster_name, "pfm-eks-prod"))
   oidc_provider_arn = coalesce(var.oidc_provider_arn, try(data.terraform_remote_state.shared.outputs.oidc_provider_arn, ""))
   oidc_issuer_url   = coalesce(var.oidc_issuer_url, try(data.terraform_remote_state.shared.outputs.oidc_issuer_url, ""))
+}
+
+data "aws_eks_cluster" "eks" {
+  name = local.eks_cluster_name
+}
+
+data "aws_eks_cluster_auth" "eks" {
+  name = local.eks_cluster_name
+}
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.eks.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.eks.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.eks.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = data.aws_eks_cluster.eks.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.eks.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.eks.token
+  }
 }
 
 resource "aws_iam_role" "pfm_web_nextjs_irsa" {
@@ -70,6 +107,62 @@ resource "aws_iam_role" "pfm_web_nextjs_irsa" {
       }
     }]
   })
+}
+
+resource "kubernetes_service_account_v1" "pfm_web_nextjs_sa" {
+  metadata {
+    name      = "pfm-web-nextjs-sa"
+    namespace = "pfm-platform"
+    annotations = {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.pfm_web_nextjs_irsa.arn
+    }
+  }
+}
+
+resource "helm_release" "pfm_web_nextjs" {
+  name             = "pfm-web-nextjs"
+  chart            = "${path.module}/../../helm"
+  namespace        = "pfm-platform"
+  create_namespace = false
+  wait             = false
+  values           = [file("${path.module}/../../helm/values-prod.yaml")]
+
+  set {
+    name  = "replicaCount"
+    value = "1"
+  }
+
+  set {
+    name  = "image.repository"
+    value = "public.ecr.aws/docker/library/busybox"
+  }
+
+  set {
+    name  = "image.tag"
+    value = "1.36"
+  }
+
+  set {
+    name  = "command[0]"
+    value = "sh"
+  }
+
+  set {
+    name  = "command[1]"
+    value = "-c"
+  }
+
+  set {
+    name  = "command[2]"
+    value = "sleep infinity"
+  }
+
+  set {
+    name  = "serviceAccountName"
+    value = kubernetes_service_account_v1.pfm_web_nextjs_sa.metadata[0].name
+  }
+
+  depends_on = [kubernetes_service_account_v1.pfm_web_nextjs_sa]
 }
 
 output "irsa_role_arn" {
