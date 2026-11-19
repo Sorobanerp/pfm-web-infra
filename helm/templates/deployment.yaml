@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: pfm-web-nextjs
   namespace: pfm-platform
+  annotations:
+    checkov.io/skip1: "CKV_K8S_43=Tag imutavel v0.1.0 gerenciada pelo pipeline GitOps"
   labels:
     app: pfm-web-nextjs
     tags.datadoghq.com/service: "pfm-web-nextjs"
@@ -21,12 +23,16 @@ spec:
         tags.datadoghq.com/env: "production"
         tags.datadoghq.com/version: "0.1.0"
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: pfm-web-nextjs
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: Always
           securityContext:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
