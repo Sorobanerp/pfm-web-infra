@@ -24,6 +24,7 @@ spec:
         tags.datadoghq.com/version: "0.1.0"
     spec:
       automountServiceAccountToken: false
+      serviceAccountName: {{ .Values.serviceAccountName | default "pfm-web-nextjs-sa" }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
@@ -44,6 +45,10 @@ spec:
             - name: http
               containerPort: {{ .Values.ports.container }}
               protocol: TCP
+          {{- if .Values.command }}
+          command:
+            {{- toYaml .Values.command | nindent 12 }}
+          {{- end }}
           env:
             {{- range $k, $v := .Values.env }}
             - name: {{ $k }}
