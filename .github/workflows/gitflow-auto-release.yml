@@ -33,7 +33,7 @@ jobs:
             gh pr create \
               --base main \
               --head "${RELEASE_BRANCH}" \
-              --title "GMUD: Release v0.1.0 (Infraestrutura)" \
+              --title "chore(release): v0.1.0 infrastructure" \
               --body "## Solicitação de Mudança (GMUD) — Infraestrutura\n- **Origem:** \`${RELEASE_BRANCH}\`\n- **Destino:** \`main\` (Produção AWS)\n- **Blast Radius:** Isolado ao módulo deste repositório\n- **Rollback:** Revert do commit na \`main\` + \`tofu apply\`"
           else
             echo "ℹ️ PR de GMUD #${EXISTING_PR} já aberta e atualizada."
