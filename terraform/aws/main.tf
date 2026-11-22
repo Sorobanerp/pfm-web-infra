@@ -144,8 +144,14 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 }
 
+variable "enable_cloudwatch_logs" {
+  description = "Disable AWS CloudWatch Logs by default (FinOps ADR-010: use Datadog JSON stdout / FireLens instead of CloudWatch)"
+  type        = bool
+  default     = false
+}
+
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  count             = var.compute_engine == "ecs_fargate_spot" ? 1 : 0
+  count             = var.compute_engine == "ecs_fargate_spot" && var.enable_cloudwatch_logs ? 1 : 0
   name              = "/ecs/pfm-web-nextjs-${var.environment}"
   retention_in_days = 7
 
@@ -183,16 +189,17 @@ resource "aws_ecs_task_definition" "service" {
           protocol      = "tcp"
         }
       ]
-      logConfiguration = {
+      logConfiguration = var.enable_cloudwatch_logs ? {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.ecs_logs[0].name
           "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "web"
         }
-      }
+      } : null
       environment = [
         { name = "NODE_ENV", value = "production" },
+        { name = "CLOUDWATCH_LOGS_ENABLED", value = "false" },
         { name = "PORT", value = "3000" }
       ]
     }
