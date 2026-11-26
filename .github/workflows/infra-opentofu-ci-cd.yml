@@ -51,6 +51,17 @@ jobs:
           wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
           echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
           sudo apt-get update -qq && sudo apt-get install -y -qq trivy
+      - name: Gitleaks (Zero Hardcoded Secrets)
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks detect --source . --redact --verbose --exit-code 1
+          rm -f gitleaks
+      - name: Secure-by-Design Policy Gate (RDS/SG/KMS)
+        run: |
+          if grep -rn --include="*.tf" "publicly_accessible[[:space:]]*=[[:space:]]*true" .; then
+            echo "::error::RDS publicly_accessible = true detectado (violacao Secure by Design)"
+            exit 1
+          fi
       - name: Trivy config scan (IaC)
         run: trivy config --exit-code 1 --severity CRITICAL,HIGH .
 
