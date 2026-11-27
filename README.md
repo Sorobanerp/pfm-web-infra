@@ -60,6 +60,6 @@ trivy config --severity CRITICAL,HIGH --exit-code 1 terraform/
 ## 5. Como Provisionar / Validar na Nuvem
 
 1. Fluxo Gitflow: `feat/*` $\rightarrow$ `develop` $\rightarrow$ `release/vX.Y.Z` $\rightarrow$ `main`.
-2. Validação pós-deploy: `aws ecs describe-services --cluster pfm-pilot-prod --services pfm-web-nextjs --region us-east-2`.
+2. Validação pós-deploy: `aws ecs describe-services --cluster pfm-ecs-pilot --services pfm-web-nextjs --region us-east-2`.
 
 Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para regras de Conventional Commits e [CHANGELOG.md](CHANGELOG.md) para histórico de versões.
