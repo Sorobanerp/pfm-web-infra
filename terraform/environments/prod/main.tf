@@ -12,7 +12,7 @@ data "terraform_remote_state" "shared" {
 }
 
 locals {
-  default_cluster_name        = var.environment == "prod" ? "pfm-ecs-pilot" : "pfm-ecs-pilot-${var.environment}"
+  default_cluster_name        = "pfm-ecs-pilot-${var.environment}"
   ecs_cluster_arn             = try(data.terraform_remote_state.shared.outputs.ecs_cluster_arn, "arn:aws:ecs:${var.aws_region}:366476833548:cluster/${local.default_cluster_name}")
   ecs_cluster_name            = try(data.terraform_remote_state.shared.outputs.ecs_cluster_name, local.default_cluster_name)
   ecs_tasks_security_group_id = try(data.terraform_remote_state.shared.outputs.ecs_tasks_security_group_id, "")
@@ -20,7 +20,7 @@ locals {
   public_subnet_ids           = try(data.terraform_remote_state.shared.outputs.public_subnet_ids, [])
   private_subnet_ids          = try(data.terraform_remote_state.shared.outputs.private_subnet_ids, [])
   task_subnet_ids             = length(local.public_subnet_ids) > 0 ? local.public_subnet_ids : local.private_subnet_ids
-  kms_master_key_arn          = try(data.terraform_remote_state.shared.outputs.kms_master_key_arn, "arn:aws:kms:${var.aws_region}:366476833548:alias/pfm-master-key")
+  kms_master_key_arn          = try(data.terraform_remote_state.shared.outputs.kms_master_key_arn, "arn:aws:kms:${var.aws_region}:366476833548:alias/pfm-master-key-${var.environment}")
   rds_resource_id             = try(data.terraform_remote_state.shared.outputs.rds_resource_id, "db-PFMCORELEDGER01")
   statements_bucket_name      = try(data.terraform_remote_state.shared.outputs.s3_statements_bucket, "pfm-statements-encrypted-${var.environment}")
   statements_bucket_arn       = try(data.terraform_remote_state.shared.outputs.s3_statements_bucket_arn, "arn:aws:s3:::pfm-statements-encrypted-${var.environment}")

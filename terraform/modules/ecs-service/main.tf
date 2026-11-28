@@ -113,7 +113,7 @@ resource "aws_ecs_task_definition" "service" {
 
 resource "aws_ecs_service" "service" {
   count           = var.compute_engine == "ecs_fargate_spot" ? 1 : 0
-  name            = var.service_name
+  name            = "${var.service_name}-${var.environment}"
   cluster         = var.ecs_cluster_arn
   task_definition = aws_ecs_task_definition.service[0].arn
   desired_count   = var.desired_count
@@ -137,10 +137,10 @@ resource "aws_ecs_service" "service" {
       namespace = var.cloud_map_namespace_arn
       service {
         port_name      = var.port_name
-        discovery_name = var.service_name
+        discovery_name = "${var.service_name}-${var.environment}"
         client_alias {
           port     = var.container_port
-          dns_name = "${var.service_name}.pfm.internal"
+          dns_name = "${var.service_name}.pfm-${var.environment}.internal"
         }
       }
     }
